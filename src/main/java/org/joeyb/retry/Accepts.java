@@ -40,6 +40,15 @@ public class Accepts {
     }
 
     /**
+     * Returns an {@link Accept} implementation that accepts an attempt with any non-null result.
+     *
+     * @param <V> the return type of the underlying {@link Callable}
+     */
+    public static <V> Accept<V> nonNullResult() {
+        return new NonNullResultAccept<>();
+    }
+
+    /**
      * Returns a composite {@link Accept} implementation that accepts if any of the underlying {@link Accept} instances
      * return {@code true} (logical OR).
      *

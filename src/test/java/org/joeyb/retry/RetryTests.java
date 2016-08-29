@@ -119,6 +119,24 @@ public class RetryTests {
     }
 
     @Test
+    public void builderAcceptAnyResult() {
+        Retry<Long> retry = Retry.<Long>newBuilder()
+                .acceptAnyResult()
+                .build();
+
+        assertThat(retry.getAccept()).isInstanceOf(ResultAccept.class);
+    }
+
+    @Test
+    public void builderAcceptNonNullResult() {
+        Retry<Long> retry = Retry.<Long>newBuilder()
+                .acceptNonNullResult()
+                .build();
+
+        assertThat(retry.getAccept()).isInstanceOf(NonNullResultAccept.class);
+    }
+
+    @Test
     public void builderMaxAttempts() {
         long maxAttempts = ThreadLocalRandom.current().nextInt(10, 10000);
 

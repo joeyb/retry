@@ -137,6 +137,26 @@ public class Retry<V> {
         }
 
         /**
+         * Adds an {@link Accept} that accepts any attempt with a result, regardless of value.
+         *
+         * @return the in-progress builder
+         */
+        public RetryBuilder<V> acceptAnyResult() {
+            this.accepts.add(Accepts.result());
+            return this;
+        }
+
+        /**
+         * Adds an {@link Accept} that accepts any attempt with a non-null result, regardless of value.
+         *
+         * @return the in-progress builder
+         */
+        public RetryBuilder<V> acceptNonNullResult() {
+            this.accepts.add(Accepts.nonNullResult());
+            return this;
+        }
+
+        /**
          * Sets the {@link Block} implementation to use.
          *
          * @param block the {@link Block} implementation to use

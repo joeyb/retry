@@ -76,6 +76,13 @@ public class AcceptsTests {
     }
 
     @Test
+    public void nonNullResultAccept() {
+        Accept<Long> accept = Accepts.nonNullResult();
+
+        assertThat(accept).isInstanceOf(NonNullResultAccept.class);
+    }
+
+    @Test
     public void orAcceptVararg0() {
         Accept<Long> accept = Accepts.or();
 
