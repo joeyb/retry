@@ -29,7 +29,7 @@ public class Accepts {
      */
     public static <V> Accept<V> and(@Nonnull Collection<Accept<V>> accepts) {
         if (accepts.size() == 0) {
-            return Accepts.result();
+            return Accepts.any();
         }
 
         if (accepts.size() == 1) {
@@ -40,12 +40,21 @@ public class Accepts {
     }
 
     /**
-     * Returns an {@link Accept} implementation that accepts an attempt with any non-null result.
+     * Returns an {@link Accept} implementation that accepts any attempt with a result, regardless of its value.
      *
      * @param <V> the return type of the underlying {@link Callable}
      */
-    public static <V> Accept<V> nonNullResult() {
-        return new NonNullResultAccept<>();
+    public static <V> Accept<V> any() {
+        return new AnyAccept<>();
+    }
+
+    /**
+     * Returns an {@link Accept} implementation that accepts any attempt with a non-null result.
+     *
+     * @param <V> the return type of the underlying {@link Callable}
+     */
+    public static <V> Accept<V> nonNull() {
+        return new NonNullAccept<>();
     }
 
     /**
@@ -69,7 +78,7 @@ public class Accepts {
      */
     public static <V> Accept<V> or(@Nonnull Collection<Accept<V>> accepts) {
         if (accepts.size() == 0) {
-            return Accepts.result();
+            return Accepts.any();
         }
 
         if (accepts.size() == 1) {
@@ -77,15 +86,6 @@ public class Accepts {
         }
 
         return new CompositeOrAccept<>(accepts);
-    }
-
-    /**
-     * Returns an {@link Accept} implementation that accepts an attempt with a result, regardless of its value.
-     *
-     * @param <V> the return type of the underlying {@link Callable}
-     */
-    public static <V> Accept<V> result() {
-        return new ResultAccept<>();
     }
 
     private Accepts() { }
