@@ -16,118 +16,159 @@ public class StopsTests {
     }
 
     @Test
-    public void compositeStopVararg() {
-        Attempt<Long> attempt = Attempts.exception(
-                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                ThreadLocalRandom.current().nextLong(),
-                new RuntimeException());
-        Stop<Long> falseStop = a -> false;
-        Stop<Long> trueStop = a -> true;
+    public void andStopVararg0() {
+        Stop<Long> stop = Stops.and();
 
-        Stop<Long> bothFalse = Stops.composite(falseStop, falseStop);
-
-        assertThat(bothFalse.stop(attempt)).isFalse();
-
-        Stop<Long> firstTrue = Stops.composite(trueStop, falseStop);
-
-        assertThat(firstTrue.stop(attempt)).isTrue();
-
-        Stop<Long> secondTrue = Stops.composite(falseStop, trueStop);
-
-        assertThat(secondTrue.stop(attempt)).isTrue();
-
-        Stop<Long> bothTrue = Stops.composite(trueStop, trueStop);
-
-        assertThat(bothTrue.stop(attempt)).isTrue();
+        assertThat(stop).isInstanceOf(NeverStop.class);
     }
 
     @Test
-    public void compositeStopCollection() {
-        Attempt<Long> attempt = Attempts.exception(
-                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                ThreadLocalRandom.current().nextLong(),
-                new RuntimeException());
+    public void andStopCollection0() {
+        Stop<Long> stop = Stops.and(Lists.newArrayList());
+
+        assertThat(stop).isInstanceOf(NeverStop.class);
+    }
+
+    @Test
+    public void andStopVararg1() {
+        Stop<Long> falseStop = a -> false;
+
+        Stop<Long> stop = Stops.and(falseStop);
+
+        assertThat(stop).isEqualTo(falseStop);
+    }
+
+    @Test
+    public void andStopCollection1() {
+        Stop<Long> falseStop = a -> false;
+
+        Stop<Long> stop = Stops.and(Lists.newArrayList(falseStop));
+
+        assertThat(stop).isEqualTo(falseStop);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void andStopVararg2() {
         Stop<Long> falseStop = a -> false;
         Stop<Long> trueStop = a -> true;
 
-        Stop<Long> bothFalse = Stops.composite(Lists.newArrayList(falseStop, falseStop));
+        Stop<Long> stop = Stops.and(falseStop, trueStop);
 
-        assertThat(bothFalse.stop(attempt)).isFalse();
+        assertThat(stop).isInstanceOf(CompositeAndStop.class);
 
-        Stop<Long> firstTrue = Stops.composite(Lists.newArrayList(trueStop, falseStop));
+        CompositeAndStop<Long> andStop = (CompositeAndStop<Long>) stop;
 
-        assertThat(firstTrue.stop(attempt)).isTrue();
+        assertThat(andStop.stops()).containsExactlyInAnyOrder(falseStop, trueStop);
+    }
 
-        Stop<Long> secondTrue = Stops.composite(Lists.newArrayList(falseStop, trueStop));
+    @Test
+    @SuppressWarnings("unchecked")
+    public void andStopCollection2() {
+        Stop<Long> falseStop = a -> false;
+        Stop<Long> trueStop = a -> true;
 
-        assertThat(secondTrue.stop(attempt)).isTrue();
+        Stop<Long> stop = Stops.and(Lists.newArrayList(falseStop, trueStop));
 
-        Stop<Long> bothTrue = Stops.composite(Lists.newArrayList(trueStop, trueStop));
+        assertThat(stop).isInstanceOf(CompositeAndStop.class);
 
-        assertThat(bothTrue.stop(attempt)).isTrue();
+        CompositeAndStop<Long> andStop = (CompositeAndStop<Long>) stop;
+
+        assertThat(andStop.stops()).containsExactlyInAnyOrder(falseStop, trueStop);
     }
 
     @Test
     public void maxAttemptsStop() {
         long maxAttempts = ThreadLocalRandom.current().nextLong(10, Long.MAX_VALUE - 1);
 
-        Attempt<Long> attemptBeforeMax = Attempts.exception(
-                maxAttempts - 1,
-                ThreadLocalRandom.current().nextLong(),
-                new RuntimeException());
-
-        Attempt<Long> attemptAtMax = Attempts.exception(
-                maxAttempts,
-                ThreadLocalRandom.current().nextLong(),
-                new RuntimeException());
-
-        Attempt<Long> attemptAfterMax = Attempts.exception(
-                maxAttempts + 1,
-                ThreadLocalRandom.current().nextLong(),
-                new RuntimeException());
-
         Stop<Long> stop = Stops.maxAttempts(maxAttempts);
 
-        assertThat(stop.stop(attemptBeforeMax)).isFalse();
-        assertThat(stop.stop(attemptAtMax)).isTrue();
-        assertThat(stop.stop(attemptAfterMax)).isTrue();
+        assertThat(stop).isInstanceOf(MaxAttemptsStop.class);
+
+        MaxAttemptsStop<Long> maxAttemptsStop = (MaxAttemptsStop<Long>) stop;
+
+        assertThat(maxAttemptsStop.maxAttempts()).isEqualTo(maxAttempts);
     }
 
     @Test
     public void maxDelayAfterStartStop() {
-        long maxDelayAfterStart = ThreadLocalRandom.current().nextLong(10, Long.MAX_VALUE - 1);
+        long maxDelay = ThreadLocalRandom.current().nextLong(10, Long.MAX_VALUE - 1);
 
-        Attempt<Long> attemptBeforeMax = Attempts.exception(
-                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                maxDelayAfterStart - 1,
-                new RuntimeException());
+        Stop<Long> stop = Stops.maxDelaySinceFirstAttempt(maxDelay);
 
-        Attempt<Long> attemptAtMax = Attempts.exception(
-                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                maxDelayAfterStart,
-                new RuntimeException());
+        assertThat(stop).isInstanceOf(MaxDelaySinceFirstAttemptStop.class);
 
-        Attempt<Long> attemptAfterMax = Attempts.exception(
-                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                maxDelayAfterStart + 1,
-                new RuntimeException());
+        MaxDelaySinceFirstAttemptStop<Long> maxDelayStop = (MaxDelaySinceFirstAttemptStop<Long>) stop;
 
-        Stop<Long> stop = Stops.maxDelaySinceFirstAttempt(maxDelayAfterStart);
-
-        assertThat(stop.stop(attemptBeforeMax)).isFalse();
-        assertThat(stop.stop(attemptAtMax)).isTrue();
-        assertThat(stop.stop(attemptAfterMax)).isTrue();
+        assertThat(maxDelayStop.maxDelaySinceFirstAttempt()).isEqualTo(maxDelay);
     }
 
     @Test
     public void neverStop() {
-        Attempt<Long> attempt = Attempts.exception(
-                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                ThreadLocalRandom.current().nextLong(),
-                new RuntimeException());
-
         Stop<Long> stop = Stops.never();
 
-        assertThat(stop.stop(attempt)).isFalse();
+        assertThat(stop).isInstanceOf(NeverStop.class);
+    }
+
+    @Test
+    public void orStopVararg0() {
+        Stop<Long> stop = Stops.or();
+
+        assertThat(stop).isInstanceOf(NeverStop.class);
+    }
+
+    @Test
+    public void orStopCollection0() {
+        Stop<Long> stop = Stops.or(Lists.newArrayList());
+
+        assertThat(stop).isInstanceOf(NeverStop.class);
+    }
+
+    @Test
+    public void orStopVararg1() {
+        Stop<Long> falseStop = a -> false;
+
+        Stop<Long> stop = Stops.or(falseStop);
+
+        assertThat(stop).isEqualTo(falseStop);
+    }
+
+    @Test
+    public void orStopCollection1() {
+        Stop<Long> falseStop = a -> false;
+
+        Stop<Long> stop = Stops.or(Lists.newArrayList(falseStop));
+
+        assertThat(stop).isEqualTo(falseStop);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void orStopVararg2() {
+        Stop<Long> falseStop = a -> false;
+        Stop<Long> trueStop = a -> true;
+
+        Stop<Long> stop = Stops.or(falseStop, trueStop);
+
+        assertThat(stop).isInstanceOf(CompositeOrStop.class);
+
+        CompositeOrStop<Long> orStop = (CompositeOrStop<Long>) stop;
+
+        assertThat(orStop.stops()).containsExactlyInAnyOrder(falseStop, trueStop);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void orStopCollection2() {
+        Stop<Long> falseStop = a -> false;
+        Stop<Long> trueStop = a -> true;
+
+        Stop<Long> stop = Stops.or(Lists.newArrayList(falseStop, trueStop));
+
+        assertThat(stop).isInstanceOf(CompositeOrStop.class);
+
+        CompositeOrStop<Long> orStop = (CompositeOrStop<Long>) stop;
+
+        assertThat(orStop.stops()).containsExactlyInAnyOrder(falseStop, trueStop);
     }
 }

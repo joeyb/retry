@@ -2,8 +2,9 @@ package org.joeyb.retry;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.concurrent.Callable;
+
+import javax.annotation.Nonnull;
 
 /**
  * {@code Stops} provides static helper methods for working with implementations of {@link Stop}.
@@ -11,26 +12,34 @@ import java.util.concurrent.Callable;
 public class Stops {
 
     /**
-     * Returns a composite {@link Stop} implementation that stops if any of the underlying {@link Stop} instances return
-     * {@code true}.
+     * Returns a composite {@link Stop} implementation that stops if all of the underlying {@link Stop} instances return
+     * {@code true} (logical AND).
      *
      * @param <V> the return type of the underlying {@link Callable}
      * @param stops the underlying {@link Stop} instances to test
      */
     @SafeVarargs
-    public static <V> Stop<V> composite(Stop<V>... stops) {
-        return new CompositeStop<>(stops);
+    public static <V> Stop<V> and(@Nonnull Stop<V>... stops) {
+        return and(Arrays.asList(stops));
     }
 
     /**
-     * Returns a composite {@link Stop} implementation that stops if any of the underlying {@link Stop} instances return
-     * {@code true}.
+     * Returns a composite {@link Stop} implementation that stops if all of the underlying {@link Stop} instances return
+     * {@code true} (logical AND).
      *
      * @param <V> the return type of the underlying {@link Callable}
      * @param stops the underlying {@link Stop} instances to test
      */
-    public static <V> Stop<V> composite(Collection<Stop<V>> stops) {
-        return new CompositeStop<>(stops);
+    public static <V> Stop<V> and(@Nonnull Collection<Stop<V>> stops) {
+        if (stops.size() == 0) {
+            return Stops.never();
+        }
+
+        if (stops.size() == 1) {
+            return stops.iterator().next();
+        }
+
+        return new CompositeAndStop<>(stops);
     }
 
     /**
@@ -63,59 +72,35 @@ public class Stops {
         return new NeverStop<>();
     }
 
-    private static class CompositeStop<V> implements Stop<V> {
-
-        private final Collection<Stop<V>> stops;
-
-        @SafeVarargs
-        CompositeStop(Stop<V>... stops) {
-            this.stops = Arrays.asList(stops);
-        }
-
-        CompositeStop(Collection<Stop<V>> stops) {
-            this.stops = new LinkedList<>(stops);
-        }
-
-        @Override
-        public boolean stop(Attempt<V> attempt) {
-            return stops.stream().anyMatch(s -> s.stop(attempt));
-        }
+    /**
+     * Returns a composite {@link Stop} implementation that stops if any of the underlying {@link Stop} instances return
+     * {@code true} (logical OR).
+     *
+     * @param <V> the return type of the underlying {@link Callable}
+     * @param stops the underlying {@link Stop} instances to test
+     */
+    @SafeVarargs
+    public static <V> Stop<V> or(@Nonnull Stop<V>... stops) {
+        return or(Arrays.asList(stops));
     }
 
-    private static class MaxAttemptsStop<V> implements Stop<V> {
-
-        private final long maxAttempts;
-
-        MaxAttemptsStop(long maxAttempts) {
-            this.maxAttempts = maxAttempts;
+    /**
+     * Returns a composite {@link Stop} implementation that stops if any of the underlying {@link Stop} instances return
+     * {@code true} (logical OR).
+     *
+     * @param <V> the return type of the underlying {@link Callable}
+     * @param stops the underlying {@link Stop} instances to test
+     */
+    public static <V> Stop<V> or(@Nonnull Collection<Stop<V>> stops) {
+        if (stops.size() == 0) {
+            return Stops.never();
         }
 
-        @Override
-        public boolean stop(Attempt<V> attempt) {
-            return attempt.attemptNumber() >= maxAttempts;
-        }
-    }
-
-    private static class MaxDelaySinceFirstAttemptStop<V> implements Stop<V> {
-
-        private final long maxDelaySinceFirstAttempt;
-
-        MaxDelaySinceFirstAttemptStop(long maxDelay) {
-            this.maxDelaySinceFirstAttempt = maxDelay;
+        if (stops.size() == 1) {
+            return stops.iterator().next();
         }
 
-        @Override
-        public boolean stop(Attempt<V> attempt) {
-            return attempt.delaySinceFirstAttempt() >= maxDelaySinceFirstAttempt;
-        }
-    }
-
-    private static class NeverStop<V> implements Stop<V> {
-
-        @Override
-        public boolean stop(Attempt<V> attempt) {
-            return false;
-        }
+        return new CompositeOrStop<>(stops);
     }
 
     private Stops() { }

@@ -5,8 +5,6 @@ import static org.joeyb.retry.TestHelpers.assertClassOnlyHasPrivateConstructor;
 
 import org.junit.Test;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 public class WaitsTests {
 
     @Test
@@ -16,13 +14,8 @@ public class WaitsTests {
 
     @Test
     public void noWait() {
-        Attempt<Long> attempt = Attempts.exception(
-                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                ThreadLocalRandom.current().nextLong(),
-                new RuntimeException());
+        Wait<Long> wait = Waits.noWait();
 
-        Wait<Long> noWait = Waits.noWait();
-
-        assertThat(noWait.waitTime(attempt)).isEqualTo(0);
+        assertThat(wait).isInstanceOf(NoWait.class);
     }
 }
