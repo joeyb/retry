@@ -28,6 +28,13 @@ public interface Attempt<V> {
     Throwable exception();
 
     /**
+     * Returns the result if the attempt has a result, otherwise throws its exception.
+     *
+     * @throws Throwable if the attempt has an exception
+     */
+    V get() throws Throwable;
+
+    /**
      * Returns {@code true} if the underlying {@link Callable} failed, otherwise returns {@code false}.
      */
     boolean hasException();

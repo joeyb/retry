@@ -41,6 +41,11 @@ class Attempts {
         }
 
         @Override
+        public V get() throws Throwable {
+            throw exception();
+        }
+
+        @Override
         public boolean hasException() {
             return true;
         }
@@ -82,6 +87,11 @@ class Attempts {
         @Override
         public Throwable exception() {
             throw new IllegalStateException("The attempt succeeded, so there is no exception");
+        }
+
+        @Override
+        public V get() throws Throwable {
+            return result();
         }
 
         @Override

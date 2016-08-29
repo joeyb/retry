@@ -5,7 +5,7 @@ import java.util.concurrent.Callable;
 /**
  * {@code Stop} defines the interface for the retry's stop strategy, which dictates when to give up retrying.
  *
- * @param <V> the type of the return value of the {@link Callable}
+ * @param <V> the type of the return value of the underlying {@link Callable}
  */
 public interface Stop<V> {
 
