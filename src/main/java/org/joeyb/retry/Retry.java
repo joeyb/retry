@@ -57,14 +57,14 @@ public class Retry<V> {
                 return attempt.result();
             }
 
-            if (stop.stop(attempt)) {
+            if (getStop().stop(attempt)) {
                 throw new RetryException(attempt);
             }
 
-            long waitTime = wait.waitTime(attempt);
+            long waitTime = getWait().waitTime(attempt);
 
             try {
-                block.block(waitTime);
+                getBlock().block(waitTime);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new RetryException(attempt);
@@ -81,6 +81,18 @@ public class Retry<V> {
      */
     public static <V> RetryBuilder<V> newBuilder() {
         return new RetryBuilder<>();
+    }
+
+    Block getBlock() {
+        return block;
+    }
+
+    Stop<V> getStop() {
+        return stop;
+    }
+
+    Wait<V> getWait() {
+        return wait;
     }
 
     /**
@@ -101,7 +113,7 @@ public class Retry<V> {
         public Retry<V> build() {
             return new Retry<>(
                     block,
-                    stops.size() == 0 ? Stops.never() : Stops.composite(stops),
+                    stops.size() == 0 ? Stops.never() : Stops.or(stops),
                     wait);
         }
 

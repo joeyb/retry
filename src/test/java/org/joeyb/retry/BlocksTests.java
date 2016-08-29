@@ -5,9 +5,6 @@ import static org.joeyb.retry.TestHelpers.assertClassOnlyHasPrivateConstructor;
 
 import org.junit.Test;
 
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-
 public class BlocksTests {
 
     @Test
@@ -16,17 +13,9 @@ public class BlocksTests {
     }
 
     @Test
-    public void threadSleepWaitsAtLeastTheExpectedAmountOfTime() throws InterruptedException {
+    public void threadSleepReturnsThreadSleepBlockInstance() throws InterruptedException {
         Block block = Blocks.threadSleep();
 
-        Long waitTime = ThreadLocalRandom.current().nextLong(500, 2000);
-
-        Long startTime = System.nanoTime();
-
-        block.block(waitTime);
-
-        Long endTime = System.nanoTime();
-
-        assertThat(TimeUnit.NANOSECONDS.toMillis(endTime - startTime)).isGreaterThanOrEqualTo(waitTime);
+        assertThat(block).isInstanceOf(ThreadSleepBlock.class);
     }
 }

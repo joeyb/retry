@@ -16,13 +16,5 @@ public class Waits {
         return new NoWait<>();
     }
 
-    private static class NoWait<V> implements Wait<V> {
-
-        @Override
-        public long waitTime(Attempt<V> attempt) {
-            return 0;
-        }
-    }
-
     private Waits() { }
 }
