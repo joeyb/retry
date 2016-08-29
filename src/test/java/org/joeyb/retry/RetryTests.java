@@ -73,6 +73,81 @@ public class RetryTests {
                 .matches(e -> ((RetryException) e).attempt().hasException());
     }
 
+    @Test
+    public void builderBuildWithoutAdditionalConfigIsSuccessful() {
+        int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 1000);
+        long expectedResult = ThreadLocalRandom.current().nextLong();
+
+        Retry<Long> retry = Retry.<Long>newBuilder()
+                .build();
+
+        Long actualResult = retry.call(new EventuallySuccessfulCallable<>(attemptsBeforeSuccess, expectedResult));
+
+        assertThat(actualResult).isEqualTo(expectedResult);
+    }
+
+    @Test
+    public void builderBlockStopAndWaitMethodsSetGivenImplementations() {
+        int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 100);
+        long expectedResult = ThreadLocalRandom.current().nextLong();
+        long waitTime = ThreadLocalRandom.current().nextLong();
+
+        MemoizingBlock memoizingBlock = new MemoizingBlock();
+        MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(attemptsBeforeSuccess + 1));
+        MemoizingWait<Long> memoizingWait = new MemoizingWait<>(attempt -> waitTime);
+
+        Retry<Long> retry = Retry.<Long>newBuilder()
+                .block(memoizingBlock)
+                .stop(memoizingStop)
+                .wait(memoizingWait)
+                .build();
+
+        Long actualResult = retry.call(new EventuallySuccessfulCallable<>(attemptsBeforeSuccess, expectedResult));
+
+        assertThat(actualResult).isEqualTo(expectedResult);
+
+        assertThat(memoizingBlock.waitTimes)
+                .hasSize(attemptsBeforeSuccess);
+
+        assertThat(memoizingStop.attempts)
+                .hasSize(attemptsBeforeSuccess);
+
+        assertThat(memoizingWait.attempts)
+                .hasSize(attemptsBeforeSuccess);
+    }
+
+    @Test
+    public void builderMaxAttempts() {
+        int maxAttempts = ThreadLocalRandom.current().nextInt(10, 10000);
+        long expectedResult = ThreadLocalRandom.current().nextLong();
+
+        Retry<Long> retry = Retry.<Long>newBuilder()
+                .maxAttempts(maxAttempts)
+                .build();
+
+        Long actualResultBeforeMax = retry.call(new EventuallySuccessfulCallable<>(maxAttempts - 2, expectedResult));
+        Long actualResultAtMax = retry.call(new EventuallySuccessfulCallable<>(maxAttempts - 1, expectedResult));
+        assertThatThrownBy(() -> retry.call(new EventuallySuccessfulCallable<>(maxAttempts, expectedResult)))
+                .isInstanceOf(RetryException.class);
+
+        assertThat(actualResultBeforeMax).isEqualTo(expectedResult);
+        assertThat(actualResultAtMax).isEqualTo(expectedResult);
+    }
+
+    @Test
+    public void builderNeverStop() {
+        int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 1000);
+        long expectedResult = ThreadLocalRandom.current().nextLong();
+
+        Retry<Long> retry = Retry.<Long>newBuilder()
+                .never()
+                .build();
+
+        Long actualResult = retry.call(new EventuallySuccessfulCallable<>(attemptsBeforeSuccess, expectedResult));
+
+        assertThat(actualResult).isEqualTo(expectedResult);
+    }
+
     private void ensureAttemptDelaysSinceFirstAttemptAreIncreasing(ConcurrentLinkedQueue<Attempt<Long>> attempts) {
         long last = 0;
 

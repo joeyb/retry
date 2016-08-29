@@ -2,6 +2,7 @@ package org.joeyb.retry;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.concurrent.Callable;
 
 /**
@@ -18,6 +19,17 @@ public class Stops {
      */
     @SafeVarargs
     public static <V> Stop<V> composite(Stop<V>... stops) {
+        return new CompositeStop<>(stops);
+    }
+
+    /**
+     * Returns a composite {@link Stop} implementation that stops if any of the underlying {@link Stop} instances return
+     * {@code true}.
+     *
+     * @param <V> the return type of the underlying {@link Callable}
+     * @param stops the underlying {@link Stop} instances to test
+     */
+    public static <V> Stop<V> composite(Collection<Stop<V>> stops) {
         return new CompositeStop<>(stops);
     }
 
@@ -58,6 +70,10 @@ public class Stops {
         @SafeVarargs
         CompositeStop(Stop<V>... stops) {
             this.stops = Arrays.asList(stops);
+        }
+
+        CompositeStop(Collection<Stop<V>> stops) {
+            this.stops = new LinkedList<>(stops);
         }
 
         @Override

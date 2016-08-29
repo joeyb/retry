@@ -3,6 +3,7 @@ package org.joeyb.retry;
 import static org.assertj.core.api.Java6Assertions.assertThat;
 import static org.joeyb.retry.TestHelpers.assertClassOnlyHasPrivateConstructor;
 
+import org.assertj.core.util.Lists;
 import org.junit.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -15,7 +16,7 @@ public class StopsTests {
     }
 
     @Test
-    public void compositeStop() {
+    public void compositeStopVararg() {
         Attempt<Long> attempt = Attempts.exception(
                 ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
                 ThreadLocalRandom.current().nextLong(),
@@ -36,6 +37,32 @@ public class StopsTests {
         assertThat(secondTrue.stop(attempt)).isTrue();
 
         Stop<Long> bothTrue = Stops.composite(trueStop, trueStop);
+
+        assertThat(bothTrue.stop(attempt)).isTrue();
+    }
+
+    @Test
+    public void compositeStopCollection() {
+        Attempt<Long> attempt = Attempts.exception(
+                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
+                ThreadLocalRandom.current().nextLong(),
+                new RuntimeException());
+        Stop<Long> falseStop = a -> false;
+        Stop<Long> trueStop = a -> true;
+
+        Stop<Long> bothFalse = Stops.composite(Lists.newArrayList(falseStop, falseStop));
+
+        assertThat(bothFalse.stop(attempt)).isFalse();
+
+        Stop<Long> firstTrue = Stops.composite(Lists.newArrayList(trueStop, falseStop));
+
+        assertThat(firstTrue.stop(attempt)).isTrue();
+
+        Stop<Long> secondTrue = Stops.composite(Lists.newArrayList(falseStop, trueStop));
+
+        assertThat(secondTrue.stop(attempt)).isTrue();
+
+        Stop<Long> bothTrue = Stops.composite(Lists.newArrayList(trueStop, trueStop));
 
         assertThat(bothTrue.stop(attempt)).isTrue();
     }
