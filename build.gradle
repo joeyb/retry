@@ -1,10 +1,69 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.13.0'
+    }
+}
+
+plugins {
+    id 'nebula.project' version '3.3.0'
+    id 'nebula.provided-base' version '3.1.0'
+}
+
+description = 'A library for creating retry strategies.'
+
+apply plugin: 'com.github.ben-manes.versions'
+
 apply plugin: 'java'
+apply plugin: 'checkstyle'
+apply plugin: 'idea'
+apply plugin: 'jacoco'
+apply plugin: 'nebula.contacts'
+apply plugin: 'nebula.info'
+apply plugin: 'nebula.javadoc-jar'
+apply plugin: 'nebula.provided-base'
+apply plugin: 'nebula.source-jar'
 
 repositories {
     jcenter()
 }
 
 dependencies {
+    provided "com.google.code.findbugs:jsr305:$jsr305Version"
+
     testCompile "junit:junit:$junitVersion"
     testCompile "org.assertj:assertj-core:$assertjVersion"
 }
+
+group 'org.joeyb.retry'
+
+sourceCompatibility = 1.8
+
+checkstyle {
+    configFile = file("$rootDir/gradle/checkstyle/checkstyle.xml")
+    toolVersion = '6.18'
+}
+
+jacoco {
+    toolVersion = '0.7.6.201602180812'
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled = true
+        html.enabled = true
+    }
+}
+
+check.dependsOn jacocoTestReport
+
+project.tasks.withType(Javadoc) {
+    failOnError = false
+}
+project.tasks.withType(Test) { Test testTask ->
+    testTask.testLogging.exceptionFormat = 'full'
+}
+
+apply from: 'publish.gradle'
