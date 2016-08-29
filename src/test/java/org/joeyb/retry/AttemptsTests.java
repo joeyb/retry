@@ -2,6 +2,7 @@ package org.joeyb.retry;
 
 import static org.assertj.core.api.Java6Assertions.assertThat;
 import static org.assertj.core.api.Java6Assertions.assertThatThrownBy;
+import static org.joeyb.retry.TestHelpers.assertClassOnlyHasPrivateConstructor;
 
 import org.junit.Test;
 
@@ -9,6 +10,11 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class AttemptsTests {
+
+    @Test
+    public void attemptsOnlyHasPrivateConstructor() {
+        assertClassOnlyHasPrivateConstructor(Attempts.class);
+    }
 
     @Test
     public void exceptionAttempt() {

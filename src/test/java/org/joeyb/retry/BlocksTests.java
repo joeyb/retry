@@ -1,6 +1,7 @@
 package org.joeyb.retry;
 
 import static org.assertj.core.api.Java6Assertions.assertThat;
+import static org.joeyb.retry.TestHelpers.assertClassOnlyHasPrivateConstructor;
 
 import org.junit.Test;
 
@@ -8,6 +9,11 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 public class BlocksTests {
+
+    @Test
+    public void blocksOnlyHasPrivateConstructor() {
+        assertClassOnlyHasPrivateConstructor(Blocks.class);
+    }
 
     @Test
     public void threadSleepWaitsAtLeastTheExpectedAmountOfTime() throws InterruptedException {
