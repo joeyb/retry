@@ -19,15 +19,26 @@ public class RetryTests {
         long expectedResult = ThreadLocalRandom.current().nextLong();
         long waitTime = ThreadLocalRandom.current().nextLong();
 
+        MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.result());
         MemoizingBlock memoizingBlock = new MemoizingBlock();
         MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(attemptsBeforeSuccess + 1));
         MemoizingWait<Long> memoizingWait = new MemoizingWait<>(attempt -> waitTime);
 
-        Retry<Long> retry = new Retry<>(memoizingBlock, memoizingStop, memoizingWait);
+        Retry<Long> retry = new Retry<>(memoizingAccept, memoizingBlock, memoizingStop, memoizingWait);
 
         Long actualResult = retry.call(new EventuallySuccessfulCallable<>(attemptsBeforeSuccess, expectedResult));
 
         assertThat(actualResult).isEqualTo(expectedResult);
+
+        assertThat(memoizingAccept.attempts)
+                .hasSize(attemptsBeforeSuccess + 1);
+
+        // The memoizingAccept's attempts collection should contain attempts numbered 1 to (attemptsBeforeSuccess + 1).
+        assertThat(memoizingAccept.attempts.stream().map(Attempt::attemptNumber).collect(Collectors.toList()))
+                .containsExactlyElementsOf(
+                        LongStream.rangeClosed(1, attemptsBeforeSuccess + 1).boxed().collect(Collectors.toList()));
+
+        ensureAttemptDelaysSinceFirstAttemptAreIncreasing(memoizingAccept.attempts);
 
         assertThat(memoizingBlock.waitTimes)
                 .containsOnly(waitTime)
@@ -61,11 +72,12 @@ public class RetryTests {
         long maxAttempts = attemptsBeforeSuccess - 1;
         long waitTime = ThreadLocalRandom.current().nextLong();
 
+        MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.result());
         MemoizingBlock memoizingBlock = new MemoizingBlock();
         MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(maxAttempts));
         MemoizingWait<Long> memoizingWait = new MemoizingWait<>(attempt -> waitTime);
 
-        Retry<Long> retry = new Retry<>(memoizingBlock, memoizingStop, memoizingWait);
+        Retry<Long> retry = new Retry<>(memoizingAccept, memoizingBlock, memoizingStop, memoizingWait);
 
         assertThatThrownBy(() -> retry.call(new EventuallySuccessfulCallable<>(attemptsBeforeSuccess, expectedResult)))
                 .isInstanceOf(RetryException.class)
@@ -84,20 +96,23 @@ public class RetryTests {
     }
 
     @Test
-    public void builderBlockStopAndWaitMethodsSetGivenImplementations() {
+    public void builderAcceptBlockStopAndWaitMethodsSetGivenImplementations() {
         int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 100);
         long waitTime = ThreadLocalRandom.current().nextLong();
 
+        MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.result());
         MemoizingBlock memoizingBlock = new MemoizingBlock();
         MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(attemptsBeforeSuccess + 1));
         MemoizingWait<Long> memoizingWait = new MemoizingWait<>(attempt -> waitTime);
 
         Retry<Long> retry = Retry.<Long>newBuilder()
+                .accept(memoizingAccept)
                 .block(memoizingBlock)
                 .stop(memoizingStop)
                 .wait(memoizingWait)
                 .build();
 
+        assertThat(retry.getAccept()).isEqualTo(memoizingAccept);
         assertThat(retry.getBlock()).isEqualTo(memoizingBlock);
         assertThat(retry.getStop()).isEqualTo(memoizingStop);
         assertThat(retry.getWait()).isEqualTo(memoizingWait);
@@ -136,7 +151,7 @@ public class RetryTests {
     @Test
     public void builderNeverStop() {
         Retry<Long> retry = Retry.<Long>newBuilder()
-                .never()
+                .neverStop()
                 .build();
 
         assertThat(retry.getStop()).isInstanceOf(NeverStop.class);
@@ -149,6 +164,23 @@ public class RetryTests {
             assertThat(attempt.delaySinceFirstAttempt()).isGreaterThanOrEqualTo(last);
 
             last = attempt.delaySinceFirstAttempt();
+        }
+    }
+
+    private static class MemoizingAccept<V> implements Accept<V> {
+
+        private final Accept<V> accept;
+
+        private final ConcurrentLinkedQueue<Attempt<V>> attempts = new ConcurrentLinkedQueue<>();
+
+        MemoizingAccept(Accept<V> accept) {
+            this.accept = accept;
+        }
+
+        @Override
+        public boolean accept(Attempt<V> attempt) {
+            attempts.add(attempt);
+            return accept.accept(attempt);
         }
     }
 
@@ -166,7 +198,7 @@ public class RetryTests {
 
         private final ConcurrentLinkedQueue<Attempt<V>> attempts = new ConcurrentLinkedQueue<>();
 
-        private Stop<V> stop;
+        private final Stop<V> stop;
 
         MemoizingStop(Stop<V> stop) {
             this.stop = stop;
@@ -183,7 +215,7 @@ public class RetryTests {
 
         private final ConcurrentLinkedQueue<Attempt<V>> attempts = new ConcurrentLinkedQueue<>();
 
-        private Wait<V> wait;
+        private final Wait<V> wait;
 
         MemoizingWait(Wait<V> wait) {
             this.wait = wait;

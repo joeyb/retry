@@ -16,11 +16,13 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public class Retry<V> {
 
+    private final Accept<V> accept;
     private final Block block;
     private final Stop<V> stop;
     private final Wait<V> wait;
 
-    public Retry(Block block, Stop<V> stop, Wait<V> wait) {
+    public Retry(Accept<V> accept, Block block, Stop<V> stop, Wait<V> wait) {
+        this.accept = accept;
         this.block = block;
         this.stop = stop;
         this.wait = wait;
@@ -53,7 +55,7 @@ public class Retry<V> {
                         e);
             }
 
-            if (attempt.hasResult()) {
+            if (accept.accept(attempt)) {
                 return attempt.result();
             }
 
@@ -83,6 +85,10 @@ public class Retry<V> {
         return new RetryBuilder<>();
     }
 
+    Accept<V> getAccept() {
+        return accept;
+    }
+
     Block getBlock() {
         return block;
     }
@@ -103,6 +109,7 @@ public class Retry<V> {
     @NotThreadSafe
     public static class RetryBuilder<V> {
 
+        private Collection<Accept<V>> accepts = new LinkedList<>();
         private Block block = Blocks.threadSleep();
         private Collection<Stop<V>> stops = new LinkedList<>();
         private Wait<V> wait = Waits.noWait();
@@ -112,9 +119,21 @@ public class Retry<V> {
          */
         public Retry<V> build() {
             return new Retry<>(
+                    Accepts.or(accepts),
                     block,
-                    stops.size() == 0 ? Stops.never() : Stops.or(stops),
+                    Stops.or(stops),
                     wait);
+        }
+
+        /**
+         * Adds the given {@link Accept} instance.
+         *
+         * @param accept the {@link Accept} implementation to add
+         * @return the in-progress builder
+         */
+        public RetryBuilder<V> accept(Accept<V> accept) {
+            this.accepts.add(accept);
+            return this;
         }
 
         /**
@@ -155,13 +174,13 @@ public class Retry<V> {
          *
          * @return the in-progress builder
          */
-        public RetryBuilder<V> never() {
+        public RetryBuilder<V> neverStop() {
             this.stops.add(Stops.never());
             return this;
         }
 
         /**
-         * Adds a the given {@link Stop} instance.
+         * Adds the given {@link Stop} instance.
          *
          * @param stop the {@link Stop} implementation to add
          * @return the in-progress builder
