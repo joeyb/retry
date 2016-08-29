@@ -19,7 +19,7 @@ public class RetryTests {
         long expectedResult = ThreadLocalRandom.current().nextLong();
         long waitTime = ThreadLocalRandom.current().nextLong();
 
-        MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.result());
+        MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.any());
         MemoizingBlock memoizingBlock = new MemoizingBlock();
         MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(attemptsBeforeSuccess + 1));
         MemoizingWait<Long> memoizingWait = new MemoizingWait<>(attempt -> waitTime);
@@ -30,15 +30,9 @@ public class RetryTests {
 
         assertThat(actualResult).isEqualTo(expectedResult);
 
-        assertThat(memoizingAccept.attempts)
-                .hasSize(attemptsBeforeSuccess + 1);
-
-        // The memoizingAccept's attempts collection should contain attempts numbered 1 to (attemptsBeforeSuccess + 1).
-        assertThat(memoizingAccept.attempts.stream().map(Attempt::attemptNumber).collect(Collectors.toList()))
-                .containsExactlyElementsOf(
-                        LongStream.rangeClosed(1, attemptsBeforeSuccess + 1).boxed().collect(Collectors.toList()));
-
-        ensureAttemptDelaysSinceFirstAttemptAreIncreasing(memoizingAccept.attempts);
+        assertThat(memoizingAccept.results)
+                .hasSize(1)
+                .contains(expectedResult);
 
         assertThat(memoizingBlock.waitTimes)
                 .containsOnly(waitTime)
@@ -66,13 +60,30 @@ public class RetryTests {
     }
 
     @Test
+    public void callableThatSucceedsButIsNotAcceptedBeforeStopThrowsRetryException() {
+        long maxAttempts = ThreadLocalRandom.current().nextInt(10, 100);
+
+        MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(r -> r > maxAttempts);
+        MemoizingBlock memoizingBlock = new MemoizingBlock();
+        MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(maxAttempts));
+        MemoizingWait<Long> memoizingWait = new MemoizingWait<>(Waits.noWait());
+
+        Retry<Long> retry = new Retry<>(memoizingAccept, memoizingBlock, memoizingStop, memoizingWait);
+
+        assertThatThrownBy(() -> retry.call(new IncrementingCallable()))
+                .isInstanceOf(RetryException.class)
+                .matches(e -> ((RetryException) e).attempt().attemptNumber() == maxAttempts)
+                .matches(e -> ((RetryException) e).attempt().hasResult());
+    }
+
+    @Test
     public void callableThatDoesNotSucceedBeforeStopThrowsRetryException() {
         int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 100);
         long expectedResult = ThreadLocalRandom.current().nextLong();
         long maxAttempts = attemptsBeforeSuccess - 1;
         long waitTime = ThreadLocalRandom.current().nextLong();
 
-        MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.result());
+        MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.any());
         MemoizingBlock memoizingBlock = new MemoizingBlock();
         MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(maxAttempts));
         MemoizingWait<Long> memoizingWait = new MemoizingWait<>(attempt -> waitTime);
@@ -100,7 +111,7 @@ public class RetryTests {
         int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 100);
         long waitTime = ThreadLocalRandom.current().nextLong();
 
-        MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.result());
+        MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.any());
         MemoizingBlock memoizingBlock = new MemoizingBlock();
         MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(attemptsBeforeSuccess + 1));
         MemoizingWait<Long> memoizingWait = new MemoizingWait<>(attempt -> waitTime);
@@ -124,7 +135,7 @@ public class RetryTests {
                 .acceptAnyResult()
                 .build();
 
-        assertThat(retry.getAccept()).isInstanceOf(ResultAccept.class);
+        assertThat(retry.getAccept()).isInstanceOf(AnyAccept.class);
     }
 
     @Test
@@ -133,7 +144,7 @@ public class RetryTests {
                 .acceptNonNullResult()
                 .build();
 
-        assertThat(retry.getAccept()).isInstanceOf(NonNullResultAccept.class);
+        assertThat(retry.getAccept()).isInstanceOf(NonNullAccept.class);
     }
 
     @Test
@@ -189,16 +200,16 @@ public class RetryTests {
 
         private final Accept<V> accept;
 
-        private final ConcurrentLinkedQueue<Attempt<V>> attempts = new ConcurrentLinkedQueue<>();
+        private final ConcurrentLinkedQueue<V> results = new ConcurrentLinkedQueue<>();
 
         MemoizingAccept(Accept<V> accept) {
             this.accept = accept;
         }
 
         @Override
-        public boolean accept(Attempt<V> attempt) {
-            attempts.add(attempt);
-            return accept.accept(attempt);
+        public boolean accept(V result) {
+            results.add(result);
+            return accept.accept(result);
         }
     }
 
@@ -267,6 +278,18 @@ public class RetryTests {
             }
 
             throw new RuntimeException();
+        }
+    }
+
+    private static class IncrementingCallable implements Callable<Long> {
+
+        private long current;
+
+        @Override
+        public Long call() throws Exception {
+            current++;
+
+            return current;
         }
     }
 }

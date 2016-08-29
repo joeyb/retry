@@ -25,8 +25,8 @@ public class CompositeAndAccept<V> implements Accept<V> {
      * {@inheritDoc}
      */
     @Override
-    public boolean accept(Attempt<V> attempt) {
-        return accepts().stream().allMatch(a -> a.accept(attempt));
+    public boolean accept(V result) {
+        return accepts().stream().allMatch(a -> a.accept(result));
     }
 
     Collection<Accept<V>> accepts() {

@@ -10,37 +10,15 @@ public class ResultAcceptTests {
 
     @Test
     public void nullResultIsAccepted() {
-        Attempt<Long> attempt = Attempts.result(
-                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                ThreadLocalRandom.current().nextLong(),
-                null);
+        AnyAccept<Long> accept = new AnyAccept<>();
 
-        ResultAccept<Long> accept = new ResultAccept<>();
-
-        assertThat(accept.accept(attempt)).isTrue();
+        assertThat(accept.accept(null)).isTrue();
     }
 
     @Test
     public void nonNullResultIsAccepted() {
-        Attempt<Long> attempt = Attempts.result(
-                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                ThreadLocalRandom.current().nextLong(),
-                ThreadLocalRandom.current().nextLong());
+        AnyAccept<Long> accept = new AnyAccept<>();
 
-        ResultAccept<Long> accept = new ResultAccept<>();
-
-        assertThat(accept.accept(attempt)).isTrue();
-    }
-
-    @Test
-    public void exceptionIsNotAccepted() {
-        Attempt<Long> attempt = Attempts.exception(
-                ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                ThreadLocalRandom.current().nextLong(),
-                new RuntimeException());
-
-        ResultAccept<Long> accept = new ResultAccept<>();
-
-        assertThat(accept.accept(attempt)).isFalse();
+        assertThat(accept.accept(ThreadLocalRandom.current().nextLong())).isTrue();
     }
 }

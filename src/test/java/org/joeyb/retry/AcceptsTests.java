@@ -17,14 +17,14 @@ public class AcceptsTests {
     public void andAcceptVararg0() {
         Accept<Long> accept = Accepts.and();
 
-        assertThat(accept).isInstanceOf(ResultAccept.class);
+        assertThat(accept).isInstanceOf(AnyAccept.class);
     }
 
     @Test
     public void andAcceptCollection0() {
         Accept<Long> accept = Accepts.and(Lists.newArrayList());
 
-        assertThat(accept).isInstanceOf(ResultAccept.class);
+        assertThat(accept).isInstanceOf(AnyAccept.class);
     }
 
     @Test
@@ -76,24 +76,31 @@ public class AcceptsTests {
     }
 
     @Test
-    public void nonNullResultAccept() {
-        Accept<Long> accept = Accepts.nonNullResult();
+    public void anyAccept() {
+        Accept<Long> accept = Accepts.any();
 
-        assertThat(accept).isInstanceOf(NonNullResultAccept.class);
+        assertThat(accept).isInstanceOf(AnyAccept.class);
+    }
+
+    @Test
+    public void nonNullAccept() {
+        Accept<Long> accept = Accepts.nonNull();
+
+        assertThat(accept).isInstanceOf(NonNullAccept.class);
     }
 
     @Test
     public void orAcceptVararg0() {
         Accept<Long> accept = Accepts.or();
 
-        assertThat(accept).isInstanceOf(ResultAccept.class);
+        assertThat(accept).isInstanceOf(AnyAccept.class);
     }
 
     @Test
     public void orAcceptCollection0() {
         Accept<Long> accept = Accepts.or(Lists.newArrayList());
 
-        assertThat(accept).isInstanceOf(ResultAccept.class);
+        assertThat(accept).isInstanceOf(AnyAccept.class);
     }
 
     @Test
@@ -142,12 +149,5 @@ public class AcceptsTests {
         CompositeOrAccept<Long> orAccept = (CompositeOrAccept<Long>) accept;
 
         assertThat(orAccept.accepts()).containsExactlyInAnyOrder(falseAccept, trueAccept);
-    }
-
-    @Test
-    public void resultAccept() {
-        Accept<Long> accept = Accepts.result();
-
-        assertThat(accept).isInstanceOf(ResultAccept.class);
     }
 }

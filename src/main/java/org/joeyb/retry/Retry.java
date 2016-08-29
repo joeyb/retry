@@ -55,7 +55,7 @@ public class Retry<V> {
                         e);
             }
 
-            if (accept.accept(attempt)) {
+            if (attempt.hasResult() && accept.accept(attempt.result())) {
                 return attempt.result();
             }
 
@@ -142,7 +142,7 @@ public class Retry<V> {
          * @return the in-progress builder
          */
         public RetryBuilder<V> acceptAnyResult() {
-            this.accepts.add(Accepts.result());
+            this.accepts.add(Accepts.any());
             return this;
         }
 
@@ -152,7 +152,7 @@ public class Retry<V> {
          * @return the in-progress builder
          */
         public RetryBuilder<V> acceptNonNullResult() {
-            this.accepts.add(Accepts.nonNullResult());
+            this.accepts.add(Accepts.nonNull());
             return this;
         }
 
