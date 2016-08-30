@@ -168,6 +168,16 @@ public class Retry<V> {
         }
 
         /**
+         * Sets the {@link Wait} to an implementation that always waits the given amount of time, in milliseconds.
+         *
+         * @param waitTime the amount of time to wait between attempts, in milliseconds.
+         */
+        public RetryBuilder<V> constantWait(long waitTime) {
+            this.wait = Waits.constant(waitTime);
+            return this;
+        }
+
+        /**
          * Adds a {@link Stop} that stops after the given maximum number of attempts.
          *
          * @param maxAttempts the maximum number of failed attempts
