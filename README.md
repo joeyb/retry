@@ -1,6 +1,8 @@
 retry
 =====
 
+[![Build Status](https://travis-ci.org/joeyb/retry.svg?branch=master)](https://travis-ci.org/joeyb/retry) [![codecov](https://codecov.io/gh/joeyb/retry/branch/master/graph/badge.svg)](https://codecov.io/gh/joeyb/retry) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.joeyb.retry/retry/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.joeyb.retry/retry)
+
 `retry` is a small, dependency-free Java library for configuring retry strategies. It is heavily inspired by [`guava-retrying`](https://github.com/rholder/guava-retrying), without its dependency on Guava.
 
 ## Setup
