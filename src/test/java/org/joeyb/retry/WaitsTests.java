@@ -5,11 +5,26 @@ import static org.joeyb.retry.TestHelpers.assertClassOnlyHasPrivateConstructor;
 
 import org.junit.Test;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 public class WaitsTests {
 
     @Test
     public void waitsOnlyHasPrivateConstructor() {
         assertClassOnlyHasPrivateConstructor(Waits.class);
+    }
+
+    @Test
+    public void constant() {
+        long waitTime = ThreadLocalRandom.current().nextLong();
+
+        Wait<Long> wait = Waits.constant(waitTime);
+
+        assertThat(wait).isInstanceOf(ConstantWait.class);
+
+        ConstantWait<Long> constantWait = (ConstantWait<Long>) wait;
+
+        assertThat(constantWait.waitTime()).isEqualTo(waitTime);
     }
 
     @Test

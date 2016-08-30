@@ -8,6 +8,16 @@ import java.util.concurrent.Callable;
 public class Waits {
 
     /**
+     * Returns an implementation of {@link Wait} that always returns the given wait time.
+     *
+     * @param waitTime the wait time to use for all attempts
+     * @param <V> the return type of the underlying {@link Callable}
+     */
+    public static <V> Wait<V> constant(long waitTime) {
+        return new ConstantWait<>(waitTime);
+    }
+
+    /**
      * Returns an implementation of {@link Wait} that always returns a wait time of 0.
      *
      * @param <V> the return type of the underlying {@link Callable}

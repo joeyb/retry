@@ -102,6 +102,7 @@ public class RetryTests {
         long expectedResult = ThreadLocalRandom.current().nextLong();
 
         Block block = waitTime -> {
+            Thread.currentThread().interrupt();
             throw new InterruptedException();
         };
 
@@ -111,6 +112,8 @@ public class RetryTests {
                 .isInstanceOf(RetryException.class)
                 .matches(e -> ((RetryException) e).attempt().attemptNumber() == 1)
                 .matches(e -> ((RetryException) e).attempt().hasException());
+
+        Thread.interrupted();
     }
 
     @Test
@@ -162,6 +165,21 @@ public class RetryTests {
                 .build();
 
         assertThat(retry.getAccept()).isInstanceOf(NonNullAccept.class);
+    }
+
+    @Test
+    public void builderConstantWait() {
+        long waitTime = ThreadLocalRandom.current().nextLong();
+
+        Retry<Long> retry = Retry.<Long>newBuilder()
+                .constantWait(waitTime)
+                .build();
+
+        assertThat(retry.getWait()).isInstanceOf(ConstantWait.class);
+
+        ConstantWait<Long> constantWait = (ConstantWait<Long>) retry.getWait();
+
+        assertThat(constantWait.waitTime()).isEqualTo(waitTime);
     }
 
     @Test
