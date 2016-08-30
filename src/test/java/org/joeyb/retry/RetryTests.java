@@ -17,7 +17,7 @@ public class RetryTests {
     public void eventuallySuccessfulCallableRetriesExpectedNumberOfTimesBeforeSucceeding() {
         int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 100);
         long expectedResult = ThreadLocalRandom.current().nextLong();
-        long waitTime = ThreadLocalRandom.current().nextLong();
+        long waitTime = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
 
         MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.any());
         MemoizingBlock memoizingBlock = new MemoizingBlock();
@@ -81,7 +81,7 @@ public class RetryTests {
         int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 100);
         long expectedResult = ThreadLocalRandom.current().nextLong();
         long maxAttempts = attemptsBeforeSuccess - 1;
-        long waitTime = ThreadLocalRandom.current().nextLong();
+        long waitTime = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
 
         MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.any());
         MemoizingBlock memoizingBlock = new MemoizingBlock();
@@ -129,7 +129,7 @@ public class RetryTests {
     @Test
     public void builderAcceptBlockStopAndWaitMethodsSetGivenImplementations() {
         int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 100);
-        long waitTime = ThreadLocalRandom.current().nextLong();
+        long waitTime = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
 
         MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.any());
         MemoizingBlock memoizingBlock = new MemoizingBlock();
@@ -169,7 +169,7 @@ public class RetryTests {
 
     @Test
     public void builderConstantWait() {
-        long waitTime = ThreadLocalRandom.current().nextLong();
+        long waitTime = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
 
         Retry<Long> retry = Retry.<Long>newBuilder()
                 .constantWait(waitTime)

@@ -16,7 +16,7 @@ public class WaitsTests {
 
     @Test
     public void constant() {
-        long waitTime = ThreadLocalRandom.current().nextLong();
+        long waitTime = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
 
         Wait<Long> wait = Waits.constant(waitTime);
 

@@ -13,6 +13,10 @@ class MaxAttemptsStop<V> implements Stop<V> {
     private final long maxAttempts;
 
     MaxAttemptsStop(long maxAttempts) {
+        if (maxAttempts < 1) {
+            throw new IllegalArgumentException("maxAttempts must be greater than 1");
+        }
+
         this.maxAttempts = maxAttempts;
     }
 
