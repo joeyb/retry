@@ -97,6 +97,23 @@ public class RetryTests {
     }
 
     @Test
+    public void blockInterruptShouldThrowRetryException() {
+        int attemptsBeforeSuccess = 10;
+        long expectedResult = ThreadLocalRandom.current().nextLong();
+
+        Block block = waitTime -> {
+            throw new InterruptedException();
+        };
+
+        Retry<Long> retry = new Retry<>(Accepts.any(), block, Stops.never(), Waits.noWait());
+
+        assertThatThrownBy(() -> retry.call(new EventuallySuccessfulCallable<>(attemptsBeforeSuccess, expectedResult)))
+                .isInstanceOf(RetryException.class)
+                .matches(e -> ((RetryException) e).attempt().attemptNumber() == 1)
+                .matches(e -> ((RetryException) e).attempt().hasException());
+    }
+
+    @Test
     public void builderBuildWithoutAdditionalConfig() {
         Retry<Long> retry = Retry.<Long>newBuilder()
                 .build();
