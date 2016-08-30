@@ -12,7 +12,7 @@ public class NoWaitTests {
     public void noWait() {
         Attempt<Long> attempt = Attempts.exception(
                 ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE),
-                ThreadLocalRandom.current().nextLong(),
+                ThreadLocalRandom.current().nextLong(Long.MAX_VALUE),
                 new RuntimeException());
 
         Wait<Long> noWait = new NoWait<>();

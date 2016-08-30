@@ -1,6 +1,7 @@
 package org.joeyb.retry;
 
 import static org.assertj.core.api.Java6Assertions.assertThat;
+import static org.assertj.core.api.Java6Assertions.assertThatThrownBy;
 
 import org.junit.Test;
 
@@ -33,5 +34,13 @@ public class MaxDelaySinceFirstAttemptStopTests {
         assertThat(stop.stop(attemptAtMax)).isTrue();
         assertThat(stop.stop(attemptAfterMax)).isTrue();
         assertThat(stop.maxDelaySinceFirstAttempt()).isEqualTo(maxDelay);
+    }
+
+    @Test
+    public void throwsIfMaxDelayIsLessThanZero() {
+        long maxDelay = -ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
+
+        assertThatThrownBy(() -> new MaxDelaySinceFirstAttemptStop<>(maxDelay))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

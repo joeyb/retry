@@ -13,6 +13,10 @@ public class MaxDelaySinceFirstAttemptStop<V> implements Stop<V> {
     private final long maxDelaySinceFirstAttempt;
 
     MaxDelaySinceFirstAttemptStop(long maxDelay) {
+        if (maxDelay < 0) {
+            throw new IllegalArgumentException("maxDelay must be greater than 0");
+        }
+
         this.maxDelaySinceFirstAttempt = maxDelay;
     }
 

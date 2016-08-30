@@ -12,6 +12,10 @@ class ConstantWait<V> implements Wait<V> {
     private final long waitTime;
 
     ConstantWait(long waitTime) {
+        if (waitTime < 0) {
+            throw new IllegalArgumentException("waitTime must be greater than 0");
+        }
+
         this.waitTime = waitTime;
     }
 
