@@ -23,11 +23,15 @@ Retry<V> retry = ...
 V result = retry.call(() -> service.performUnreliableRequest());
 ```
 
-The retry strategy is dictated by 4 basic components:
+The retry strategy is dictated by 5 basic components:
 
 ### Accept
 
 The acceptance strategy (defined by the [`Accept`](src/main/java/org/joeyb/retry/Accept.java) interface) is used to specify whether or not the result from an attempted execution of the underlying `Callable<V>` should be accepted. For example, `Accepts.any()` returns an `Accept` instance that accepts any value.
+
+### Attempt Listener
+
+The attempt listener (defined as a `Consumer<Attempt<V>>`) is used to give the consumer a notification of failed attempts. This is useful for logging failures or keeping metrics of failed attempt counts.
 
 ### Block
 

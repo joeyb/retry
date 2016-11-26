@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.2.0] - 2016-11-25
+### Added
+- Attempt Listener support, for receiving notification of failed attempts.
+
 ## [1.1.0] - 2016-08-29
 ### Added
 - Constant Wait strategy

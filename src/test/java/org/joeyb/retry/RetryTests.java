@@ -5,9 +5,11 @@ import static org.assertj.core.api.Java6Assertions.assertThatThrownBy;
 
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
@@ -20,11 +22,17 @@ public class RetryTests {
         long waitTime = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
 
         MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.any());
+        MemoizingAttemptListener<Long> memoizingAttemptListener = new MemoizingAttemptListener<>();
         MemoizingBlock memoizingBlock = new MemoizingBlock();
         MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(attemptsBeforeSuccess + 1));
         MemoizingWait<Long> memoizingWait = new MemoizingWait<>(attempt -> waitTime);
 
-        Retry<Long> retry = new Retry<>(memoizingAccept, memoizingBlock, memoizingStop, memoizingWait);
+        Retry<Long> retry = new Retry<>(
+                memoizingAccept,
+                Collections.singleton(memoizingAttemptListener),
+                memoizingBlock,
+                memoizingStop,
+                memoizingWait);
 
         Long actualResult = retry.call(new EventuallySuccessfulCallable<>(attemptsBeforeSuccess, expectedResult));
 
@@ -33,6 +41,10 @@ public class RetryTests {
         assertThat(memoizingAccept.results)
                 .hasSize(1)
                 .contains(expectedResult);
+
+        assertThat(memoizingAttemptListener.attempts)
+                .allMatch(Attempt::hasException)
+                .hasSize(attemptsBeforeSuccess);
 
         assertThat(memoizingBlock.waitTimes)
                 .containsOnly(waitTime)
@@ -61,39 +73,58 @@ public class RetryTests {
 
     @Test
     public void callableThatSucceedsButIsNotAcceptedBeforeStopThrowsRetryException() {
-        long maxAttempts = ThreadLocalRandom.current().nextInt(10, 100);
+        int maxAttempts = ThreadLocalRandom.current().nextInt(10, 100);
 
         MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(r -> r > maxAttempts);
+        MemoizingAttemptListener<Long> memoizingAttemptListener = new MemoizingAttemptListener<>();
         MemoizingBlock memoizingBlock = new MemoizingBlock();
         MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(maxAttempts));
         MemoizingWait<Long> memoizingWait = new MemoizingWait<>(Waits.noWait());
 
-        Retry<Long> retry = new Retry<>(memoizingAccept, memoizingBlock, memoizingStop, memoizingWait);
+        Retry<Long> retry = new Retry<>(
+                memoizingAccept,
+                Collections.singleton(memoizingAttemptListener),
+                memoizingBlock,
+                memoizingStop,
+                memoizingWait);
 
         assertThatThrownBy(() -> retry.call(new IncrementingCallable()))
                 .isInstanceOf(RetryException.class)
                 .matches(e -> ((RetryException) e).attempt().attemptNumber() == maxAttempts)
                 .matches(e -> ((RetryException) e).attempt().hasResult());
+
+        assertThat(memoizingAttemptListener.attempts)
+                .hasSize(maxAttempts);
     }
 
     @Test
     public void callableThatDoesNotSucceedBeforeStopThrowsRetryException() {
         int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 100);
         long expectedResult = ThreadLocalRandom.current().nextLong();
-        long maxAttempts = attemptsBeforeSuccess - 1;
+        int maxAttempts = attemptsBeforeSuccess - 1;
         long waitTime = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
 
         MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.any());
+        MemoizingAttemptListener<Long> memoizingAttemptListener = new MemoizingAttemptListener<>();
         MemoizingBlock memoizingBlock = new MemoizingBlock();
         MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(maxAttempts));
         MemoizingWait<Long> memoizingWait = new MemoizingWait<>(attempt -> waitTime);
 
-        Retry<Long> retry = new Retry<>(memoizingAccept, memoizingBlock, memoizingStop, memoizingWait);
+        Retry<Long> retry = new Retry<>(
+                memoizingAccept,
+                Collections.singleton(memoizingAttemptListener),
+                memoizingBlock,
+                memoizingStop,
+                memoizingWait);
 
         assertThatThrownBy(() -> retry.call(new EventuallySuccessfulCallable<>(attemptsBeforeSuccess, expectedResult)))
                 .isInstanceOf(RetryException.class)
                 .matches(e -> ((RetryException) e).attempt().attemptNumber() == maxAttempts)
                 .matches(e -> ((RetryException) e).attempt().hasException());
+
+        assertThat(memoizingAttemptListener.attempts)
+                .allMatch(Attempt::hasException)
+                .hasSize(maxAttempts);
     }
 
     @Test
@@ -106,7 +137,12 @@ public class RetryTests {
             throw new InterruptedException();
         };
 
-        Retry<Long> retry = new Retry<>(Accepts.any(), block, Stops.never(), Waits.noWait());
+        Retry<Long> retry = new Retry<>(
+                Accepts.any(),
+                Collections.emptySet(),
+                block,
+                Stops.never(),
+                Waits.noWait());
 
         assertThatThrownBy(() -> retry.call(new EventuallySuccessfulCallable<>(attemptsBeforeSuccess, expectedResult)))
                 .isInstanceOf(RetryException.class)
@@ -121,29 +157,34 @@ public class RetryTests {
         Retry<Long> retry = Retry.<Long>newBuilder()
                 .build();
 
+        assertThat(retry.getAccept()).isInstanceOf(AnyAccept.class);
+        assertThat(retry.getAttemptListeners()).hasSize(0);
         assertThat(retry.getBlock()).isInstanceOf(ThreadSleepBlock.class);
         assertThat(retry.getStop()).isInstanceOf(NeverStop.class);
         assertThat(retry.getWait()).isInstanceOf(NoWait.class);
     }
 
     @Test
-    public void builderAcceptBlockStopAndWaitMethodsSetGivenImplementations() {
+    public void builderAcceptAttemptListenerBlockStopAndWaitMethodsSetGivenImplementations() {
         int attemptsBeforeSuccess = ThreadLocalRandom.current().nextInt(10, 100);
         long waitTime = ThreadLocalRandom.current().nextLong(Long.MAX_VALUE);
 
         MemoizingAccept<Long> memoizingAccept = new MemoizingAccept<>(Accepts.any());
+        MemoizingAttemptListener<Long> memoizingAttemptListener = new MemoizingAttemptListener<>();
         MemoizingBlock memoizingBlock = new MemoizingBlock();
         MemoizingStop<Long> memoizingStop = new MemoizingStop<>(Stops.maxAttempts(attemptsBeforeSuccess + 1));
         MemoizingWait<Long> memoizingWait = new MemoizingWait<>(attempt -> waitTime);
 
         Retry<Long> retry = Retry.<Long>newBuilder()
                 .accept(memoizingAccept)
+                .attemptListener(memoizingAttemptListener)
                 .block(memoizingBlock)
                 .stop(memoizingStop)
                 .wait(memoizingWait)
                 .build();
 
         assertThat(retry.getAccept()).isEqualTo(memoizingAccept);
+        assertThat(retry.getAttemptListeners()).containsExactly(memoizingAttemptListener);
         assertThat(retry.getBlock()).isEqualTo(memoizingBlock);
         assertThat(retry.getStop()).isEqualTo(memoizingStop);
         assertThat(retry.getWait()).isEqualTo(memoizingWait);
@@ -245,6 +286,16 @@ public class RetryTests {
         public boolean accept(V result) {
             results.add(result);
             return accept.accept(result);
+        }
+    }
+
+    private static class MemoizingAttemptListener<V> implements Consumer<Attempt<V>> {
+
+        private final ConcurrentLinkedQueue<Attempt<V>> attempts = new ConcurrentLinkedQueue<>();
+
+        @Override
+        public void accept(Attempt<V> attempt) {
+            attempts.add(attempt);
         }
     }
 

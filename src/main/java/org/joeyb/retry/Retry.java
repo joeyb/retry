@@ -1,9 +1,11 @@
 package org.joeyb.retry;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.annotation.concurrent.ThreadSafe;
@@ -17,12 +19,18 @@ import javax.annotation.concurrent.ThreadSafe;
 public class Retry<V> {
 
     private final Accept<V> accept;
+    private final Collection<Consumer<Attempt<V>>> attemptListeners;
     private final Block block;
     private final Stop<V> stop;
     private final Wait<V> wait;
 
-    public Retry(Accept<V> accept, Block block, Stop<V> stop, Wait<V> wait) {
+    public Retry(Accept<V> accept,
+                 Collection<Consumer<Attempt<V>>> attemptListeners,
+                 Block block,
+                 Stop<V> stop,
+                 Wait<V> wait) {
         this.accept = accept;
+        this.attemptListeners = Collections.unmodifiableCollection(attemptListeners);
         this.block = block;
         this.stop = stop;
         this.wait = wait;
@@ -59,6 +67,10 @@ public class Retry<V> {
                 return attempt.result();
             }
 
+            for (final Consumer<Attempt<V>> attemptListener : attemptListeners) {
+                attemptListener.accept(attempt);
+            }
+
             if (getStop().stop(attempt)) {
                 throw new RetryException(attempt);
             }
@@ -89,6 +101,10 @@ public class Retry<V> {
         return accept;
     }
 
+    Collection<Consumer<Attempt<V>>> getAttemptListeners() {
+        return attemptListeners;
+    }
+
     Block getBlock() {
         return block;
     }
@@ -109,21 +125,12 @@ public class Retry<V> {
     @NotThreadSafe
     public static class RetryBuilder<V> {
 
-        private Collection<Accept<V>> accepts = new LinkedList<>();
-        private Block block = Blocks.threadSleep();
-        private Collection<Stop<V>> stops = new LinkedList<>();
-        private Wait<V> wait = Waits.noWait();
+        private final Collection<Accept<V>> accepts = new LinkedList<>();
+        private final Collection<Consumer<Attempt<V>>> attemptListeners = new LinkedList<>();
+        private final Collection<Stop<V>> stops = new LinkedList<>();
 
-        /**
-         * Returns an instance of {@link Retry} built using this builder's config.
-         */
-        public Retry<V> build() {
-            return new Retry<>(
-                    Accepts.or(accepts),
-                    block,
-                    Stops.or(stops),
-                    wait);
-        }
+        private Block block = Blocks.threadSleep();
+        private Wait<V> wait = Waits.noWait();
 
         /**
          * Adds the given {@link Accept} instance.
@@ -157,6 +164,18 @@ public class Retry<V> {
         }
 
         /**
+         * Adds a {@link Consumer} that is executed on each failed retry {@link Attempt}. The listeners are useful for
+         * keeping logs and metrics on failures.
+         *
+         * @param attemptListener a {@link Consumer} to be executed on each failed {@link Attempt}
+         * @return the in-progress builder
+         */
+        public RetryBuilder<V> attemptListener(Consumer<Attempt<V>> attemptListener) {
+            this.attemptListeners.add(attemptListener);
+            return this;
+        }
+
+        /**
          * Sets the {@link Block} implementation to use.
          *
          * @param block the {@link Block} implementation to use
@@ -165,6 +184,18 @@ public class Retry<V> {
         public RetryBuilder<V> block(Block block) {
             this.block = block;
             return this;
+        }
+
+        /**
+         * Returns an instance of {@link Retry} built using this builder's config.
+         */
+        public Retry<V> build() {
+            return new Retry<>(
+                    Accepts.or(accepts),
+                    attemptListeners,
+                    block,
+                    Stops.or(stops),
+                    wait);
         }
 
         /**
